@@ -1,6 +1,6 @@
 # :musical_note:**Downloader spotify song**
 
-### Simple free and unlimited spotify playlist downloads  
+### Simple free and unlimited spotify playlist downloads 
 
 ## Instruction:
 
