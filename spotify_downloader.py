@@ -1,44 +1,45 @@
-from youtube_search import YoutubeSearch
-from moviepy.editor import *
-from pytube import Playlist
-import moviepy.editor as mp
-from pytube import YouTube
-from pathlib import Path
 import requests
 import json
 import re
 import os
-from requests.structures import CaseInsensitiveDict
+from youtube_search import YoutubeSearch
+from moviepy.editor import *
+import moviepy.editor as mp
+from pytube import Playlist, YouTube
+from pathlib import Path
+from base64 import b64encode
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
-global BEARER_TOKEN, playlist_url
-BEARER_TOKEN = "<your bearer token>"
-playlist_url = '<your playlist>'
 
-
-def get_new_token():
-    url = playlist_url
-    headers = requests.utils.default_headers()
-    headers.update(
-        {
-            'User-Agent': 'My User Agent 1.0',
-        }
-    )
-
-    response = requests.get(url, headers=headers)
-    return response
-
+def get_bearer_token(client_id, client_secret):
+    url = "https://accounts.spotify.com/api/token"
+    payload = {
+        'grant_type': 'client_credentials'
+    }
+    headers = {
+        'Authorization': 'Basic ' + b64encode(f"{client_id}:{client_secret}".encode()).decode(),
+    }
+    response = requests.post(url, data=payload, headers=headers)
+    return response.json()['access_token']
 
 def get_tracks(playlist_id, offset, limit, token):
-    url = "https://api.spotify.com/v1/playlists/" + str(playlist_id) + "/tracks?offset=" + str(offset) + "&limit=" + str(limit) + "&market=GB"
-    payload={}
+    url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks?offset={offset}&limit={limit}&market=GB"
     headers = {
-        'authorization': 'Bearer ' + str(token),
+        'Authorization': 'Bearer ' + token,
         'Sec-Fetch-Dest': 'empty',
     }
-    
-    response = requests.request("GET", url, headers=headers, data=payload)
-    return json.loads(response.text)
+    response = requests.get(url, headers=headers)
+    return response.json()
+
+# Replace these values with your actual client ID and client secret
+client_id = os.getenv("CLIENT_ID")
+client_secret = os.getenv("CLIENT_SECRET")
+
+# Obtain bearer token
+bearer_token = get_bearer_token(client_id, client_secret)
 
 
 def get_song_names(playlist_id):
@@ -46,7 +47,7 @@ def get_song_names(playlist_id):
     offset_counter = 0
     tracks = []
     while not done:
-        new_token = get_new_token()
+        new_token = bearer_token
         data = get_tracks(playlist_id, offset_counter, 100, new_token)
         if(not 'total' in data):
             print(data)
@@ -111,6 +112,7 @@ def download_playlist(spotify_playlist_id):
 
 
 regex = re.compile(r"\d\w+")
+playlist_url = os.getenv("PLAYLIST_URL")
 part_url = regex.findall(playlist_url)
 id_playlist = str(part_url)[2:-2]
 download_playlist(id_playlist)
